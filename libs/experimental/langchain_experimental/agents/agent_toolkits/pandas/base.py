@@ -168,6 +168,7 @@ def create_pandas_dataframe_agent(
     include_df_in_prompt: Optional[bool] = True,
     number_of_head_rows: int = 5,
     extra_tools: Sequence[BaseTool] = (),
+    base_reple: BaseTool | None = None,
     engine: Literal["pandas", "modin"] = "pandas",
     allow_dangerous_code: bool = False,
     **kwargs: Any,
@@ -211,6 +212,7 @@ def create_pandas_dataframe_agent(
         number_of_head_rows: Number of initial rows to include in prompt if
             include_df_in_prompt is True.
         extra_tools: Additional tools to give to agent on top of a PythonAstREPLTool.
+        base_reple: Provide a self defined REPL class, must be of type 'class PythonAstREPLTool(BaseTool) := BaseTool'.
         engine: One of "modin" or "pandas". Defaults to "pandas".
         allow_dangerous_code: bool, default False
             This agent relies on access to a python repl tool which can execute
@@ -290,7 +292,12 @@ def create_pandas_dataframe_agent(
             df_locals[f"df{i + 1}"] = dataframe
     else:
         df_locals["df"] = df
-    tools = [PythonAstREPLTool(locals=df_locals)] + list(extra_tools)
+
+    # Use the custom repl, if provided
+    if base_reple is not None:
+        tools = [base_reple(locals=df_locals)] + list(extra_tools)
+    else:
+        tools = [PythonAstREPLTool(locals=df_locals)] + list(extra_tools)
 
     if agent_type == AgentType.ZERO_SHOT_REACT_DESCRIPTION:
         if include_df_in_prompt is not None and suffix is not None:
